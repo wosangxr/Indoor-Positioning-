@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Indoor Positioning: ระบุตำแหน่งในอาคาร</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef3f9;--card:#fff;--ink:#0f2a47;--mut:#54708f;--blue:#1e7fd6;--slate:#6b8bae;--amb:#e8912d;--line:#cfdbe8;--room:#f6f9fd;--red:#d64545}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1a2b;--card:#15263b;--ink:#eaf1f9;--mut:#9db5cf;--blue:#4aa3f0;--slate:#7f9fc2;--amb:#f2a03d;--line:#2c4460;--room:#1a2f47;--red:#ef6a6a}}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:inherit}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans Thai',system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:clamp(22px,4.5vw,32px);font-weight:800;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 16px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+.tab{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:600 14px 'Noto Sans Thai',sans-serif;padding:6px 14px;border-radius:999px;cursor:pointer}
+.tab[aria-selected=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.tab:focus-visible,.btn:focus-visible{outline:3px solid var(--amb);outline-offset:2px}
+.stage{background:var(--card);border-radius:18px;margin-top:10px;padding:10px;border:1px solid var(--line);position:relative;min-height:300px}
+.scene{display:none;width:100%}.scene.on{display:block}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:'Noto Sans Thai',sans-serif;fill:var(--ink)}
+.lbl{font-size:13px;font-weight:600}.small{font-size:11px;fill:var(--mut)!important}
+.room{fill:var(--room);stroke:var(--line);stroke-width:2}
+.bar{height:5px;background:var(--line);position:relative;overflow:hidden;border-radius:4px;margin-top:20px}
+.bar i{position:absolute;inset:0;width:0;background:var(--blue)}
+.play .bar i{animation:prog 8s linear forwards}
+@keyframes prog{to{width:100%}}
+.cap{display:flex;gap:12px;align-items:flex-start;margin-top:14px}
+.cap h2{margin:0;font-size:20px}.cap p{margin:2px 0 0;color:var(--mut)}
+.tag{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;padding:0 10px;font-weight:600;font-size:13px;margin-right:6px}
+.ctrl{display:flex;gap:8px;margin-top:12px}
+.btn{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:6px 14px;font:600 14px 'Noto Sans Thai',sans-serif;cursor:pointer}
+/* animations */
+.rip{transform-box:fill-box;transform-origin:center;fill:none;stroke:var(--blue);stroke-width:2;opacity:0}
+.on .rip{animation:rip 2.4s ease-out infinite}.on .rip.d2{animation-delay:.8s}.on .rip.d3{animation-delay:1.6s}
+@keyframes rip{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1);opacity:0}}
+.on .blk{animation:blk 2.4s ease-in-out infinite}
+@keyframes blk{0%{stroke-dashoffset:40}60%{stroke-dashoffset:0;opacity:1}100%{opacity:.2}}
+.on .x{animation:pop 2.4s infinite}
+@keyframes pop{0%,45%{opacity:0;transform:scale(.3)}60%,100%{opacity:1;transform:scale(1)}}
+.x{transform-box:fill-box;transform-origin:center}
+.on .walk{animation:walk 7s ease-in-out infinite alternate}
+@keyframes walk{to{transform:translate(300px,0)}}
+.on .near1{animation:n1 7s ease-in-out infinite alternate}.on .near2{animation:n2 7s ease-in-out infinite alternate}
+@keyframes n1{0%,35%{opacity:1}55%,100%{opacity:.08}}@keyframes n2{0%,45%{opacity:.08}65%,100%{opacity:1}}
+.on .hit{animation:hit 3s ease-in-out infinite}
+@keyframes hit{0%,40%{opacity:.15}60%,100%{opacity:1}}
+.on .dash{stroke-dasharray:6 6;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-12}}
+.on .pulse{transform-box:fill-box;transform-origin:center;animation:pl 1.6s ease-in-out infinite}
+@keyframes pl{50%{transform:scale(1.25)}}
+.on .sweep{transform-box:view-box;transform-origin:120px 270px;animation:sw 4s ease-in-out infinite alternate}
+@keyframes sw{0%{transform:rotate(30deg)}100%{transform:rotate(-38deg)}}
+/* compare */
+.cmp{display:grid;gap:8px;padding:10px 12px}
+.row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center}
+.row b{font-size:15px}.meters{display:grid;gap:4px}
+.m{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+.m u{display:block;height:8px;border-radius:5px;background:var(--line);text-decoration:none;position:relative;overflow:hidden}
+.m u::after{content:"";position:absolute;inset:0;width:0;background:var(--blue);border-radius:5px}
+.m.c u::after{background:var(--amb)}
+.on .m u::after{animation:gr 1.2s .3s ease-out forwards;width:0}
+@keyframes gr{to{width:var(--v)}}
+.uses{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 10px}
+.chip{background:var(--room);border:1px solid var(--line);border-radius:12px;padding:4px 12px;font-size:14px}
+.note{font-size:12px;color:var(--mut);padding:0 12px 8px;margin:0}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Indoor Positioning</h1>
+<p class="sub">เมื่อสัญญาณดาวเทียมเข้าไม่ถึง อาคารรู้ตำแหน่งเราได้อย่างไร</p>
+<div class="tabs" id="tabs" role="tablist"></div>
+<div class="stage" id="stage">
+
+<!-- 0 problem -->
+<div class="scene on"><svg viewBox="0 0 640 320" role="img" aria-label="สัญญาณดาวเทียมถูกหลังคาอาคารบัง">
+<g><circle cx="120" cy="40" r="16" fill="var(--slate)"/><rect x="80" y="34" width="24" height="12" rx="2" fill="var(--blue)"/><rect x="136" y="34" width="24" height="12" rx="2" fill="var(--blue)"/><text x="120" y="76" text-anchor="middle" class="lbl">ดาวเทียม (GPS)</text></g>
+<g stroke="var(--blue)" stroke-width="3" stroke-dasharray="8 6" fill="none"><line class="blk" x1="120" y1="90" x2="300" y2="150"/><line class="blk" x1="120" y1="90" x2="380" y2="150"/></g>
+<g class="x"><circle cx="340" cy="150" r="17" fill="var(--red)"/><path d="M333 143l14 14M347 143l-14 14" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
+<rect x="230" y="160" width="360" height="140" class="room"/><path d="M215 162 L410 122 L605 162Z" fill="var(--slate)"/>
+<circle class="pulse" cx="410" cy="240" r="12" fill="var(--amb)"/><text x="410" y="246" text-anchor="middle" style="fill:#fff;font-weight:800">?</text>
+<text x="410" y="285" text-anchor="middle" class="small">ในอาคาร ไม่รู้ตำแหน่ง</text>
+</svg></div>
+
+<!-- 1 RSSI -->
+<div class="scene"><svg viewBox="0 0 640 320" role="img" aria-label="RSSI และ Fingerprinting">
+<rect x="20" y="20" width="600" height="240" rx="6" class="room"/>
+<g id="fp"></g>
+<g fill="var(--blue)"><circle cx="50" cy="50" r="9"/><circle cx="590" cy="50" r="9"/><circle cx="330" cy="250" r="9"/></g>
+<g><circle class="rip" cx="50" cy="50" r="150"/><circle class="rip d2" cx="50" cy="50" r="150"/><circle class="rip" cx="590" cy="50" r="150"/><circle class="rip d2" cx="590" cy="50" r="150"/><circle class="rip d3" cx="330" cy="250" r="150"/><circle class="rip" cx="330" cy="250" r="150"/></g>
+<circle class="pulse" cx="330" cy="138" r="20" fill="none" stroke="var(--amb)" stroke-width="2" opacity="0.85"/>
+<text x="330" y="106" text-anchor="middle" class="lbl" fill="var(--amb)" style="fill:var(--amb);font-weight:700">วัดได้ −62 dBm</text>
+<text x="20" y="288" class="lbl">แผนที่ความแรงสัญญาณที่เก็บไว้ก่อน</text><text x="20" y="308" class="small">ค่าที่วัดได้ตรงกับจุดไหน = ผู้ใช้อยู่จุดนั้น</text>
+</svg></div>
+
+<!-- 2 Proximity -->
+<div class="scene"><svg viewBox="0 0 640 320" role="img" aria-label="Proximity">
+<rect x="20" y="30" width="290" height="210" rx="6" class="room"/><rect x="330" y="30" width="290" height="210" rx="6" class="room"/>
+<text x="40" y="58" class="lbl">ห้อง A</text><text x="350" y="58" class="lbl">ห้อง B</text>
+<g class="near1"><circle cx="165" cy="140" r="70" fill="var(--blue)" opacity=".2"/><circle cx="165" cy="140" r="9" fill="var(--blue)"/><text x="165" y="270" text-anchor="middle" class="lbl">อยู่ใกล้ Beacon ห้อง A</text></g>
+<g class="near2"><circle cx="475" cy="140" r="70" fill="var(--blue)" opacity=".2"/><circle cx="475" cy="140" r="9" fill="var(--blue)"/><text x="475" y="270" text-anchor="middle" class="lbl">อยู่ใกล้ Reader ห้อง B</text></g>
+<circle cx="165" cy="140" r="9" fill="var(--blue)"/><circle cx="475" cy="140" r="9" fill="var(--blue)"/>
+<g class="walk"><circle cx="90" cy="180" r="11" fill="var(--amb)"/></g>
+<text x="20" y="308" class="small">ไม่ต้องรู้พิกัดเป๊ะ แค่รู้ว่า "ใกล้จุดอ้างอิงใด" (BLE Beacon, RFID Reader)</text></svg></div>
+
+<!-- 3 UWB -->
+<div class="scene"><svg viewBox="0 0 640 320" role="img" aria-label="UWB ToF TDoA">
+<rect x="20" y="20" width="600" height="250" rx="6" class="room"/>
+<g fill="var(--blue)"><rect x="34" y="34" width="16" height="16" rx="3"/><rect x="590" y="34" width="16" height="16" rx="3"/><rect x="312" y="242" width="16" height="16" rx="3"/></g>
+<g fill="none" stroke="var(--blue)" stroke-width="2" class="dash"><circle cx="42" cy="42" r="290"/><circle cx="598" cy="42" r="228"/><circle cx="320" cy="250" r="140"/></g>
+<circle class="pulse" cx="330" cy="112" r="12" fill="var(--amb)"/>
+<text x="340" y="90" class="lbl">แท็ก UWB</text>
+<text x="20" y="292" class="lbl">วัดเวลาเดินทางของสัญญาณ → ระยะ → จุดตัดของวงกลมคือตำแหน่ง</text>
+<text x="20" y="312" class="small">แม่นยำสูง เหมาะกับงานที่ต้องการความละเอียด</text></svg></div>
+
+<!-- 4 AoA -->
+<div class="scene"><svg viewBox="0 0 640 320" role="img" aria-label="AoA">
+<rect x="20" y="20" width="600" height="250" rx="6" class="room"/>
+<rect x="95" y="262" width="50" height="10" rx="3" fill="var(--blue)"/>
+<g class="sweep"><line x1="120" y1="270" x2="120" y2="40" stroke="var(--amb)" stroke-width="3" stroke-dasharray="6 6"/></g>
+<line x1="120" y1="270" x2="120" y2="40" stroke="var(--line)" stroke-width="2"/>
+<g class="pulse"><circle cx="440" cy="110" r="12" fill="var(--amb)"/></g>
+<line class="dash" x1="120" y1="270" x2="440" y2="110" stroke="var(--blue)" stroke-width="3"/>
+<path d="M120 200 A70 70 0 0 1 182 236" fill="none" stroke="var(--slate)" stroke-width="2"/>
+<text x="150" y="196" class="lbl">θ</text>
+<text x="135" y="304" class="lbl">เสาอากาศหลายตัว (BLE 5.1)</text>
+<text x="360" y="90" class="lbl">แท็ก</text>
+<text x="330" y="304" class="small">วัด "มุม" ที่สัญญาณเข้ามา แทนการวัดระยะ</text></svg></div>
+
+<!-- 5 compare -->
+<div class="scene"><div class="cmp">
+<div class="row"><b>Wi-Fi</b><div class="meters"><div class="m"><span>แม่นยำ</span><u style="--v:45%"></u></div><div class="m"><span>ครอบคลุม</span><u style="--v:85%"></u></div><div class="m c"><span>ต้นทุน</span><u style="--v:30%"></u></div></div></div>
+<div class="row"><b>Bluetooth/BLE</b><div class="meters"><div class="m"><span>แม่นยำ</span><u style="--v:55%"></u></div><div class="m"><span>ครอบคลุม</span><u style="--v:60%"></u></div><div class="m c"><span>ต้นทุน</span><u style="--v:35%"></u></div></div></div>
+<div class="row"><b>RFID</b><div class="meters"><div class="m"><span>แม่นยำ</span><u style="--v:35%"></u></div><div class="m"><span>ครอบคลุม</span><u style="--v:25%"></u></div><div class="m c"><span>ต้นทุน</span><u style="--v:25%"></u></div></div></div>
+<div class="row"><b>UWB</b><div class="meters"><div class="m"><span>แม่นยำ</span><u style="--v:95%"></u></div><div class="m"><span>ครอบคลุม</span><u style="--v:55%"></u></div><div class="m c"><span>ต้นทุน</span><u style="--v:80%"></u></div></div></div>
+<p class="note">แท่งสีส้ม = ต้นทุน (ยิ่งยาวยิ่งสูง) · ระดับเป็นค่าเปรียบเทียบเชิงหลักการ ไม่ใช่ตัวเลขวัดจริง ควรดูเรื่องโครงสร้างพื้นฐาน สภาพแวดล้อม และความซับซ้อนของระบบร่วมด้วย</p>
+<div class="uses"><span class="chip">🏥 นำทางในห้อง/โรงพยาบาล</span><span class="chip">🛏️ ติดตามรถเข็น/เครื่องมือในโรงงาน</span><span class="chip">👥 นับคนในอาคาร</span></div>
+</div></div>
+
+</div>
+<div class="bar" id="bar"><i></i></div>
+<div class="cap"><div><h2 id="ct"></h2><p id="cd"></p></div></div>
+<div class="ctrl"><button class="btn" id="prev">ก่อนหน้า</button><button class="btn" id="pp">หยุดเล่น</button><button class="btn" id="next">ถัดไป</button></div>
+</div>
+<script>
+var S=[
+["ปัญหา","ในอาคาร สัญญาณดาวเทียมมีข้อจำกัด","ต้องใช้เทคโนโลยีที่อาศัยโครงสร้างพื้นฐานหรือจุดอ้างอิงภายในอาคารแทน"],
+["Wi-Fi / BLE","RSSI + Fingerprinting","เก็บแผนที่ความแรงสัญญาณล่วงหน้า แล้วเทียบกับค่าที่วัดได้ (Wi-Fi, BLE)"],
+["Proximity","บอกว่าอยู่ใกล้จุดอ้างอิงใด","ใช้ BLE Beacon หรือ RFID Reader เป็นจุดอ้างอิงในบางระบบ"],
+["UWB","ToF / TDoA","วัดเวลาเดินทางของสัญญาณ เพื่อรองรับงานที่ต้องการความแม่นยำสูง"],
+["BLE 5.1","AoA: วัดมุมสัญญาณ","Direction Finding ใช้มุมที่สัญญาณเข้ามาเพื่อประมาณตำแหน่ง"],
+["เปรียบเทียบ","เลือกอย่างไรดี","ดู ความแม่นยำ • ระยะครอบคลุม • ต้นทุน • โครงสร้างพื้นฐาน • สภาพแวดล้อม • ความซับซ้อน"]];
+var sc=document.querySelectorAll('.scene'),tb=document.getElementById('tabs'),i=0,playing=true,timer;
+S.forEach(function(s,k){var b=document.createElement('button');b.className='tab';b.setAttribute('role','tab');b.textContent=s[0];b.onclick=function(){go(k,true)};tb.appendChild(b)});
+// fingerprint grid
+var g='',v=[-40,-52,-61,-70,-58,-45,-55,-62,-48,-66,-72,-60,-50,-63,-57];
+for(var r=0;r<3;r++)for(var c=0;c<5;c++){var x=110+c*110,y=72+r*66,n=v[r*5+c],h=(r==1&&c==2);
+g+='<g class="'+(h?'hit':'')+'"><circle cx="'+x+'" cy="'+y+'" r="'+(h?17:14)+'" fill="'+(h?'var(--amb)':'var(--slate)')+'" opacity="'+(h?1:.35)+'"/><text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" style="font-size:10px;font-weight:600;fill:'+(h?'#fff':'var(--ink)')+'">'+n+'</text></g>'}
+document.getElementById('fp').innerHTML=g;
+function go(k,manual){i=(k+S.length)%S.length;sc.forEach(function(e,j){e.classList.toggle('on',j==i)});
+[].forEach.call(tb.children,function(b,j){b.setAttribute('aria-selected',j==i)});
+document.getElementById('ct').innerHTML='<span class="tag">'+S[i][0]+'</span>'+S[i][1];document.getElementById('cd').textContent=S[i][2];
+var bar=document.getElementById('bar');bar.classList.remove('play');void bar.offsetWidth;
+clearTimeout(timer);if(manual&&!playing){return}if(playing){bar.classList.add('play');timer=setTimeout(function(){go(i+1)},8000)}}
+document.getElementById('prev').onclick=function(){go(i-1,true)};
+document.getElementById('next').onclick=function(){go(i+1,true)};
+document.getElementById('pp').onclick=function(){playing=!playing;this.textContent=playing?'หยุดเล่น':'เล่นต่อ';go(i,true)};
+go(0);
+</script>
+</body>
+</html>
